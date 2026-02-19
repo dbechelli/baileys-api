@@ -467,7 +467,10 @@ export class BaileysConnection {
           this.phoneNumber,
           lastDisconnect ?? {},
         );
-        await this.handleReconnecting();
+        const shouldContinue = await this.handleReconnecting();
+        if (!shouldContinue) {
+          return;
+        }
         // NOTE: We don't call `this.close()` here because we want to keep the auth state.
         this.socket = null;
         // Implement simple exponential backoff
@@ -574,7 +577,7 @@ export class BaileysConnection {
     this.logout();
   }
 
-  private async handleReconnecting() {
+  private async handleReconnecting(): Promise<boolean> {
     this.reconnectCount += 1;
     if (this.reconnectCount > 10) {
       logger.warn(
@@ -582,12 +585,13 @@ export class BaileysConnection {
         this.phoneNumber,
       );
       await this.close();
-      return;
+      return false;
     }
     this.sendToWebhook({
       event: "connection.update",
       data: { connection: "reconnecting" as WAConnectionState },
     });
+    return true;
   }
 
   private async sendToWebhook(
