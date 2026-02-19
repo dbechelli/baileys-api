@@ -256,7 +256,7 @@ export class BaileysConnection {
     await this.clearAuthState?.();
     this.clearAuthState = null;
     this.socket = null;
-    this.reconnectCount = 0;
+    // this.reconnectCount = 0; // Don't reset reconnect count on close!!!
     this.onConnectionClose?.();
   }
 
@@ -585,6 +585,8 @@ export class BaileysConnection {
         this.phoneNumber,
       );
       await this.close();
+      // Reset count after hard close to allow future manual attempts but prevent loop
+      // this.reconnectCount = 0; 
       return false;
     }
     this.sendToWebhook({
