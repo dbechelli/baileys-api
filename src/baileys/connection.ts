@@ -448,7 +448,7 @@ export class BaileysConnection {
         qr ?? "",
       );
       this.isReconnect = false;
-      this.handleReconnecting();
+      await this.handleReconnecting();
       return;
     }
 
@@ -581,12 +581,12 @@ export class BaileysConnection {
     this.reconnectCount += 1;
     if (this.reconnectCount > 10) {
       logger.warn(
-        "[%s] [handleReconnecting] Reconnect count exceeded 10, resetting connection",
+        "[%s] [handleReconnecting] Reconnect count exceeded 10. SESSION CORRUPTED OR INVALID. Clearing auth state and resetting connection permanently.",
         this.phoneNumber,
       );
+      // FORCE CLEANUP: Delete credentials from Redis to prevent loop after restart
+      await this.clearAuthState?.(); 
       await this.close();
-      // Reset count after hard close to allow future manual attempts but prevent loop
-      // this.reconnectCount = 0; 
       return false;
     }
     this.sendToWebhook({
