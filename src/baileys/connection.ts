@@ -448,7 +448,10 @@ export class BaileysConnection {
         qr ?? "",
       );
       this.isReconnect = false;
-      await this.handleReconnecting();
+      const shouldContinue = await this.handleReconnecting();
+      if (!shouldContinue) {
+        return;
+      }
       return;
     }
 
@@ -499,6 +502,7 @@ export class BaileysConnection {
         qrDataUrl,
       });
       if (this.lastConnectionUpdate) {
+        // @ts-ignore
         this.lastConnectionUpdate.qrDataUrl = qrDataUrl;
       }
     }
