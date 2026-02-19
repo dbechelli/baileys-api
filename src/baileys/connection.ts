@@ -101,6 +101,7 @@ export class BaileysConnection {
   private clearOnlinePresenceTimeout: ReturnType<typeof setTimeout> | null =
     null;
   private reconnectCount = 0;
+  private lastConnectionUpdate: Partial<ConnectionState> | undefined;
 
   constructor(phoneNumber: string, options: BaileysConnectionOptions) {
     this.phoneNumber = phoneNumber;
@@ -133,6 +134,13 @@ export class BaileysConnection {
           errorToString(error),
         );
       }
+    };
+  }
+
+  getStatus() {
+    return {
+      phoneNumber: this.phoneNumber,
+      ...this.lastConnectionUpdate,
     };
   }
 
@@ -413,6 +421,14 @@ export class BaileysConnection {
   private async handleConnectionUpdate(data: Partial<ConnectionState>) {
     const { connection, qr, lastDisconnect, isNewLogin, isOnline } = data;
 
+    this.lastConnectionUpdate = {
+      ...this.lastConnectionUpdate,
+      ...data,
+    };
+    if (connection === "open" || connection === "close") {
+      delete this.lastConnectionUpdate.qr;
+    }
+
     // NOTE: Reconnection flow
     // - `isNewLogin`: sent after close on first connection (see `shouldReconnect` below). We send a `reconnecting` update to indicate qr code has been read.
     // - `connection === "connecting"` sent on:
@@ -454,6 +470,8 @@ export class BaileysConnection {
         await this.handleReconnecting();
         // NOTE: We don't call `this.close()` here because we want to keep the auth state.
         this.socket = null;
+        // Implement simple exponential backoff
+        await asyncSleep(1000 * Math.min(this.reconnectCount, 5));
         this.connect();
         return;
       }
@@ -472,10 +490,14 @@ export class BaileysConnection {
     }
 
     if (qr) {
+      const qrDataUrl = await toDataURL(qr);
       Object.assign(data, {
         connection: "connecting",
-        qrDataUrl: await toDataURL(qr),
+        qrDataUrl,
       });
+      if (this.lastConnectionUpdate) {
+        this.lastConnectionUpdate.qrDataUrl = qrDataUrl;
+      }
     }
 
     if (isOnline) {

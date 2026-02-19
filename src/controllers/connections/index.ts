@@ -20,6 +20,23 @@ const connectionsController = new Elysia({
 })
   // TODO: Use auth data to limit access to existing connections.
   .use(authMiddleware)
+  .get(
+    "/:phoneNumber",
+    ({ params }) => {
+      const { phoneNumber } = params;
+      return baileys.getStatus(phoneNumber);
+    },
+    {
+      params: phoneNumberParams,
+      detail: {
+        responses: {
+          200: {
+            description: "Connection status",
+          },
+        },
+      },
+    },
+  )
   .post(
     "/:phoneNumber",
     async ({ params, body }) => {

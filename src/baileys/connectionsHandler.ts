@@ -96,6 +96,10 @@ export class BaileysConnectionsHandler {
     return connection;
   }
 
+  getStatus(phoneNumber: string) {
+    return this.getConnection(phoneNumber).getStatus();
+  }
+
   sendPresenceUpdate(
     phoneNumber: string,
     { type, toJid }: { type: WAPresence; toJid?: string | undefined },
